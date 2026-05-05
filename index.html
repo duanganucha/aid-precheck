@@ -267,17 +267,31 @@
             el.classList.remove('hidden');
         }
 
+        function ensureAudioPlayer() {
+            if (audioPlayer) return audioPlayer;
+            audioPlayer = new Audio();
+            audioPlayer.preload = 'auto';
+            audioPlayer.addEventListener('ended', () => {
+                if (isPlaying) setTimeout(() => { nextSlide(); }, 800);
+            });
+            audioPlayer.addEventListener('error', () => {
+                showAudioStatus('โหลดไฟล์เสียงไม่สำเร็จ: ' + (audioPlayer.src || ''));
+            });
+            return audioPlayer;
+        }
+
         function stopCurrentAudio() {
             if (audioPlayer) {
                 audioPlayer.pause();
-                audioPlayer.onended = null;
-                audioPlayer.onerror = null;
-                audioPlayer.src = '';
-                audioPlayer = null;
+                audioPlayer.removeAttribute('src');
+                audioPlayer.load();
             }
         }
 
         function startPresentation() {
+            // สร้าง Audio element ใต้ user gesture ก่อน — Chromium จะปลดล็อก autoplay
+            // ให้ element นี้ตลอดอายุของ session (reuse src แทนสร้างใหม่)
+            ensureAudioPlayer();
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('presentationScreen').classList.remove('hidden');
             renderSlide(0);
@@ -316,26 +330,15 @@
             document.getElementById('progressBar').style.width = `${progress}%`;
         }
 
-        // เล่นไฟล์เสียง pre-rendered สำหรับสไลด์ปัจจุบัน
+        // เล่นไฟล์เสียง pre-rendered สำหรับสไลด์ปัจจุบัน (reuse same Audio element เพื่อรักษา user gesture)
         function playAudio() {
-            stopCurrentAudio();
             showAudioStatus('');
-
+            const player = ensureAudioPlayer();
             const slide = slides[currentSlideIndex];
-            audioPlayer = new Audio(slide.audio);
-            audioPlayer.preload = 'auto';
-
-            audioPlayer.onended = function () {
-                if (isPlaying) {
-                    setTimeout(() => { nextSlide(); }, 800);
-                }
-            };
-
-            audioPlayer.onerror = function () {
-                showAudioStatus('โหลดไฟล์เสียงไม่สำเร็จ: ' + slide.audio);
-            };
-
-            const p = audioPlayer.play();
+            player.pause();
+            player.src = slide.audio;
+            player.currentTime = 0;
+            const p = player.play();
             if (p && typeof p.catch === 'function') {
                 p.catch(err => {
                     showAudioStatus('เล่นเสียงไม่สำเร็จ: ' + ((err && err.message) || err));
