@@ -294,7 +294,7 @@
 
         // ใช้ไฟล์เสียงรวม (combined.mp3) + กระโดด currentTime ระหว่างสไลด์
         // เพื่อให้ play() ถูกเรียกครั้งเดียวภายใต้ user gesture (Chromium จะไม่ block)
-        const SEGMENT_DURATIONS = [22.564, 26.622, 20.358, 17.108, 20.467, 23.348, 20.059, 19.885];
+        const SEGMENT_DURATIONS = [22.564, 26.622, 20.358, 17.108, 20.467, 23.348, 17.563, 19.885];
         const SEGMENT_STARTS = (() => { let t = 0; return SEGMENT_DURATIONS.map(d => { const s = t; t += d; return s; }); })();
         const SEGMENT_ENDS = SEGMENT_STARTS.map((s, i) => s + SEGMENT_DURATIONS[i]);
 
