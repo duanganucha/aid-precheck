@@ -491,7 +491,7 @@
             const p = m.play();
             if (p && typeof p.then === 'function') {
                 p.then(() => { introPlayed = true; setIntroStatus('PLAY OK rs=' + m.readyState); })
-                 .catch(err => { setIntroStatus('FAIL: ' + (err.name || err.message || err) + ' err=' + (m.error && m.error.code)); });
+                 .catch(err => { const ua = navigator.userActivation; setIntroStatus('FAIL: ' + (err.name || err.message || err) + ' rs=' + m.readyState + ' ua.hasBeen=' + (ua && ua.hasBeenActive) + ' ua.isActive=' + (ua && ua.isActive)); });
             } else {
                 introPlayed = true;
                 setIntroStatus('play() returned undefined (legacy)');
@@ -524,7 +524,7 @@
             };
 
             intro.addEventListener('click', dismiss);
-            intro.addEventListener('touchstart', dismiss, { passive: true });
+            intro.addEventListener('pointerup', dismiss);
 
             // ถ้าไม่แตะภายใน 30 วินาที auto-dismiss (เพิ่มเวลาเพื่อให้ทันอ่าน status)
             setTimeout(() => { if (!dismissed) dismiss(); }, 30000);
