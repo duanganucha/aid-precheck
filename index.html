@@ -63,6 +63,9 @@
 
 <body class="h-[100dvh] flex flex-col items-center justify-center p-0 sm:p-4">
 
+    <!-- Intro chime — เล่นตอน splash (หรือเมื่อ user แตะครั้งแรกถ้า autoplay ถูก block) -->
+    <audio id="introMusic" src="audio/intro.mp3" preload="auto"></audio>
+
     <!-- Intro Splash Screen -->
     <div id="introScreen" class="fixed inset-0 bg-green-600 z-[100] flex flex-col items-center justify-center">
         <div class="text-white text-center intro-anim">
@@ -338,6 +341,7 @@
         }
 
         function startPresentation() {
+            stopIntroChime();   // หยุด intro chime ถ้ายังเล่นอยู่
             ensureAudioPlayer();
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('presentationScreen').classList.remove('hidden');
@@ -474,8 +478,36 @@
             stopCurrentAudio();
         };
 
+        // เล่นเสียง intro chime — ลอง autoplay ก่อน, ถ้าถูก block ให้เล่นเมื่อ user แตะหน้าจอครั้งแรก
+        let introPlayed = false;
+        function playIntroChime() {
+            if (introPlayed) return;
+            const m = document.getElementById('introMusic');
+            if (!m) return;
+            const p = m.play();
+            if (p && typeof p.then === 'function') {
+                p.then(() => { introPlayed = true; }).catch(() => { /* will retry on user gesture */ });
+            } else {
+                introPlayed = true;
+            }
+        }
+        function stopIntroChime() {
+            const m = document.getElementById('introMusic');
+            if (m) { m.pause(); m.currentTime = 0; }
+        }
+
         // ระบบ Intro Animation
         document.addEventListener("DOMContentLoaded", () => {
+            playIntroChime();   // ลอง autoplay
+            // fallback: เล่นเมื่อ user แตะหน้าจอครั้งแรก (ครั้งเดียว)
+            const onFirstGesture = () => {
+                playIntroChime();
+                document.removeEventListener('touchstart', onFirstGesture, true);
+                document.removeEventListener('mousedown', onFirstGesture, true);
+            };
+            document.addEventListener('touchstart', onFirstGesture, true);
+            document.addEventListener('mousedown', onFirstGesture, true);
+
             setTimeout(() => {
                 const intro = document.getElementById('introScreen');
                 if (intro) {
