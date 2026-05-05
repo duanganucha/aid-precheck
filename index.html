@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ข้อควรรู้ก่อนการตรวจเอดส์ - โรงพยาบาลศรีสะเกษ</title>
+    <!-- ใช้ Tailwind CSS สำหรับความสวยงาม -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ใช้ FontAwesome สำหรับไอคอน -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ฟอนต์ภาษาไทย -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f0fdf4;
+        }
+
+        .slide-enter {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="h-[100dvh] flex flex-col items-center justify-center p-0 sm:p-4">
+
+    <!-- หน้าจอเริ่มต้น -->
+    <div id="startScreen"
+        class="bg-white rounded-2xl shadow-xl p-8 max-w-2xl w-[calc(100%-2rem)] sm:w-full text-center slide-enter m-4 sm:m-0">
+        <div class="flex justify-center mb-6">
+            <img src="images/start_cover.png" alt="Cover Image"
+                class="w-full max-w-sm rounded-xl shadow-lg object-cover border-4 border-white">
+        </div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">ข้อควรรู้ก่อนการตรวจเอดส์</h1>
+        <h2 class="text-xl text-green-600 font-semibold mb-6">โรงพยาบาลศรีสะเกษ</h2>
+        <p class="text-gray-600 mb-8">สื่อนำเสนอพร้อมเสียงบรรยาย
+            เพื่อให้ความรู้ความเข้าใจที่ถูกต้องก่อนเข้ารับการตรวจเลือด</p>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <button onclick="startPresentation()"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition transform hover:scale-105 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play"></i> เริ่มเล่นวีดีโอ/เสียงบรรยาย
+            </button>
+            <button onclick="showQRCode()"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition transform hover:scale-105 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-qrcode"></i> แสดง QR Code สแกนผ่านไลน์
+            </button>
+        </div>
+    </div>
+
+    <!-- หน้าจอแสดงผลเนื้อหา (ซ่อนไว้ตอนแรก) -->
+    <div id="presentationScreen"
+        class="hidden bg-white rounded-none sm:rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col h-full sm:h-[95vh] slide-enter">
+        <!-- Header -->
+        <div class="bg-green-600 text-white p-4 flex justify-between items-center">
+            <div class="font-bold">รพ.ศรีสะเกษ : ข้อควรรู้ก่อนตรวจเอดส์</div>
+            <button onclick="stopPresentation()" class="text-white hover:text-red-200"><i
+                    class="fa-solid fa-times text-xl"></i> ปิด</button>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-gray-200 h-2">
+            <div id="progressBar" class="bg-green-400 h-2 progress-bar" style="width: 0%"></div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="flex-grow p-8 flex flex-col items-center justify-center text-center overflow-y-auto">
+            <img id="slideImage" src=""
+                class="hidden w-full max-w-sm rounded-xl shadow-lg mb-6 object-cover border-4 border-white"
+                alt="Slide Image">
+            <i id="slideIcon" class="text-7xl text-blue-500 mb-6"></i>
+            <h2 id="slideTitle" class="text-2xl font-bold text-gray-800 mb-4">Title</h2>
+            <div id="slideText" class="text-lg text-gray-700 leading-relaxed max-w-2xl text-left">
+                Content goes here...
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="bg-gray-50 p-4 border-t flex justify-between items-center">
+            <button onclick="prevSlide()"
+                class="p-3 text-gray-600 hover:text-green-600 rounded-full hover:bg-green-50 transition">
+                <i class="fa-solid fa-backward-step text-2xl"></i>
+            </button>
+
+            <button id="playPauseBtn" onclick="togglePlay()"
+                class="bg-green-600 text-white w-14 h-14 rounded-full shadow-md flex items-center justify-center hover:bg-green-700 transition transform hover:scale-105">
+                <i class="fa-solid fa-pause text-2xl"></i>
+            </button>
+
+            <button onclick="nextSlide()"
+                class="p-3 text-gray-600 hover:text-green-600 rounded-full hover:bg-green-50 transition">
+                <i class="fa-solid fa-forward-step text-2xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- หน้าจอตอนจบ -->
+    <div id="endScreen"
+        class="hidden bg-white rounded-none sm:rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col h-full sm:h-[95vh] slide-enter">
+        <div class="bg-green-600 text-white p-4 flex justify-between items-center">
+            <div class="font-bold">รพ.ศรีสะเกษ : จบการนำเสนอ</div>
+            <button onclick="stopPresentation()" class="text-white hover:text-red-200"><i
+                    class="fa-solid fa-times text-xl"></i> ปิด</button>
+        </div>
+        <div class="flex-grow p-8 flex flex-col items-center justify-center text-center overflow-y-auto">
+            <img src="images/side_end.png"
+                class="w-full max-w-sm rounded-xl shadow-lg mb-8 object-cover border-4 border-white" alt="End Screen">
+
+            <p class="text-lg text-gray-600 mb-8">ขอบคุณที่รับชม<br>หากมีข้อสงสัยเพิ่มเติมกรุณาติดต่อเจ้าหน้าที่</p>
+            <button onclick="stopPresentation()"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105">
+                <i class="fa-solid fa-rotate-left mr-2"></i> กลับไปหน้าเริ่มต้น
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal QR Code -->
+    <div id="qrModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center relative">
+            <button onclick="closeQRCode()" class="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-xl">
+                <i class="fa-solid fa-times"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">แสกนเพื่อดูข้อมูลบนมือถือ</h3>
+            <div id="qrcode" class="flex justify-center mb-6"></div>
+            <p class="text-sm text-gray-600 mb-4">ให้คนไข้เปิดแอป LINE แล้วเลือกฟังก์ชั่นสแกน QR Code ได้เลยครับ</p>
+            <a href="https://line.me/R/msg/text/?ข้อควรรู้ก่อนการตรวจเอดส์ โรงพยาบาลศรีสะเกษ" target="_blank"
+                class="block w-full bg-[#00B900] text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition">
+                <i class="fa-brands fa-line mr-2"></i> แชร์ผ่าน LINE
+            </a>
+            <!-- หมายเหตุสำหรับผู้พัฒนา -->
+            <p class="text-xs text-red-500 mt-4 text-left border-t pt-2">
+                *หมายเหตุ: ปัจจุบัน QR Code สร้างจาก URL จำลอง หากคุณนำไฟล์นี้ไปอัปโหลดขึ้นเว็บไซต์โรงพยาบาล ให้แก้ไข
+                URL ในโค้ดบรรทัดที่ 161 เป็นลิงก์เว็บของคุณ
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ข้อมูลสไลด์เนื้อหาและบทพูด (ดัดแปลงจากเอกสารที่แนบมา)
+        const slides = [
+            {
+                title: "1. ความรู้เกี่ยวกับโรคเอดส์",
+                icon: "fa-solid fa-virus-covid",
+                image: "images/slide_1.png",
+                text: `<ul class="list-disc pl-5 space-y-2">
+                        <li>โรคเอดส์เกิดจากการติดเชื้อ HIV เข้าสู่ร่างกายได้ 3 ทาง คือ</li>
+                        <li><b>ทางเพศสัมพันธ์:</b> การร่วมเพศกับผู้มีเชื้อ</li>
+                        <li><b>ทางเลือด:</b> รับเลือด หรือใช้เข็มฉีดยาร่วมกัน</li>
+                        <li><b>จากแม่สู่ลูก:</b> ขณะตั้งครรภ์ คลอด หรือกินนมแม่</li>
+                       </ul>`,
+                speak: "ข้อที่ 1 ความรู้เกี่ยวกับโรคเอดส์ โรคเอดส์เกิดจากการติดเชื้อเอชไอวี ซึ่งเข้าสู่ร่างกายได้ 3 ทาง คือ 1 ทางเพศสัมพันธ์ 2 ทางเลือด เช่น การใช้เข็มฉีดยาร่วมกัน และ 3 จากแม่ที่ติดเชื้อถ่ายทอดสู่ลูก"
+            },
+            {
+                title: "อาการของโรคเอดส์",
+                icon: "fa-solid fa-head-side-cough",
+                image: "images/slide_2.png",
+                text: `<p>ระยะต้นอาจคล้ายไข้หวัด หรือต่อมน้ำเหลืองโต ต่อมามีเชื้อราในปาก งูสวัด ท้องเสีย น้ำหนักลด</p>
+                       <p class="mt-2 text-red-600"><b>ระยะเต็มขั้น:</b> เชื้อราขึ้นสมอง ปอดอักเสบ มะเร็ง</p>
+                       <p class="mt-2 text-green-700"><i>*หากดูแลตัวเองดี (ไม่ดื่มสุรา สูบบุหรี่ ออกกำลังกาย ทานยา) อาจใช้เวลาหลายปีกว่าจะมีอาการ</i></p>`,
+                speak: "อาการของโรคเอดส์ ในระยะต้นอาจมีอาการคล้ายไข้หวัด หรือผู้ติดเชื้อไม่รู้สึกผิดปกติเลย ต่อมาจึงมีอาการมากขึ้น เช่น เชื้อราในปาก ท้องเสียบ่อย น้ำหนักลด และในระยะเต็มขั้นอาจมีเชื้อราขึ้นสมอง หรือปอดอักเสบ หากดูแลสุขภาพดี อาจใช้เวลาหลายปีกว่าจะมีอาการ"
+            },
+            {
+                title: "2. การตรวจเลือดเอดส์",
+                icon: "fa-solid fa-vial-virus",
+                image: "images/slide_3.png",
+                text: `<ul class="list-disc pl-5 space-y-3">
+                        <li><b>ผลบวก (+):</b> มีเชื้อเอดส์ (อาจยังไม่มีอาการป่วยทันที)</li>
+                        <li><b>ผลลบ (-):</b> ตรวจไม่พบเชื้อ (แต่อาจเพิ่งรับเชื้อมา 1-2 เดือน)</li>
+                       </ul>
+                       <p class="mt-4 bg-yellow-100 p-3 rounded text-sm text-yellow-800">หากมีความเสี่ยงและผลเป็นลบ ควรตรวจซ้ำอีก 3-6 เดือนต่อมา และงดพฤติกรรมเสี่ยงระหว่างรอ</p>`,
+                speak: "ข้อที่ 2 การตรวจเลือดเอดส์ หากผลเลือดเป็นบวก แปลว่ามีเชื้อ หากผลเลือดเป็นลบ แปลว่าตรวจไม่พบเชื้อ แต่ผลลบไม่ได้แปลว่าไม่มีเชื้อเสมอไป หากเพิ่งได้รับเชื้อมาไม่นาน ควรตรวจซ้ำอีก 3 ถึง 6 เดือนต่อมา"
+            },
+            {
+                title: "3. ทำไมควรตรวจเอดส์?",
+                icon: "fa-solid fa-shield-heart",
+                image: "images/slide_4.png",
+                text: `<p class="text-center font-semibold text-xl mb-4 text-green-700">"รู้เร็ว ป้องกันได้ รักษาทัน"</p>
+                       <ul class="list-disc pl-5 space-y-2">
+                        <li>เพื่อป้องกันคนที่เรารัก (สามี ภรรยา ลูก) ไม่ให้ติดเชื้อ</li>
+                        <li>จะได้ดูแลรักษาสุขภาพตนเองแต่เนิ่นๆ</li>
+                        <li>เพื่อการมีชีวิตที่ยืนยาว แข็งแรง และมีคุณภาพชีวิตที่ดี</li>
+                       </ul>`,
+                speak: "ข้อที่ 3 ทำไมควรตรวจเอดส์ การรู้ตัวว่ามีเชื้อหรือไม่ มีประโยชน์ในการป้องกันคนที่เรารักไม่ให้ติดเชื้อตาม และจะได้เข้าสู่ระบบการรักษา เพื่อให้มีชีวิตที่ยืนยาวและแข็งแรง"
+            },
+            {
+                title: "4. สิทธิของผู้รับการตรวจเอดส์",
+                icon: "fa-solid fa-user-shield",
+                image: "images/slide_5.png",
+                text: `<ul class="list-disc pl-5 space-y-2 text-sm">
+                        <li>ต้องได้รับการอธิบายและเซ็นยินยอมก่อนตรวจเสมอ</li>
+                        <li>มีสิทธิซักถามขั้นตอนและผลการตรวจ</li>
+                        <li><b>ผลการตรวจถือเป็นความลับสูงสุด</b> แพทย์จะแจ้งผู้อื่นไม่ได้หากไม่ได้รับความยินยอม</li>
+                        <li>มีสิทธิไปตรวจที่คลินิกนิรนาม (ไม่แจ้งชื่อ) หรือเลือกที่จะไม่ขอรับทราบผลก็ได้</li>
+                       </ul>`,
+                speak: "สิทธิของผู้รับการตรวจเอดส์ การตรวจต้องได้รับคำอธิบายและเซ็นยินยอมก่อน ผลการตรวจจะถูกปิดเป็นความลับสูงสุดระหว่างแพทย์และผู้ตรวจเท่านั้น ผู้รับการตรวจมีสิทธิซักถาม และมีสิทธิเลือกที่จะตรวจแบบไม่เปิดเผยชื่อได้"
+            },
+            {
+                title: "5. เอดส์ไม่ติดต่อโดยวิธีเหล่านี้",
+                icon: "fa-solid fa-handshake-angle",
+                image: "images/slide_6.png",
+                text: `<div class="grid grid-cols-2 gap-4 text-sm font-semibold">
+                        <div class="bg-green-50 p-3 rounded"><i class="fa-solid fa-utensils text-green-500"></i> กินอาหารร่วมกัน</div>
+                        <div class="bg-green-50 p-3 rounded"><i class="fa-solid fa-people-arrows text-green-500"></i> สัมผัสถูกต้องตัวกัน</div>
+                        <div class="bg-green-50 p-3 rounded"><i class="fa-solid fa-toilet text-green-500"></i> ใช้ห้องน้ำร่วมกัน</div>
+                        <div class="bg-green-50 p-3 rounded"><i class="fa-solid fa-swimmer text-green-500"></i> ว่ายน้ำสระเดียวกัน</div>
+                        <div class="bg-green-50 p-3 rounded col-span-2"><i class="fa-solid fa-mosquito text-green-500"></i> ยุงกัด (ยุงไม่เป็นพาหะเอดส์)</div>
+                       </div>
+                       <p class="mt-4 text-center text-green-700">ดังนั้น จึงไม่ควรรังเกียจผู้ติดเชื้อเอดส์</p>`,
+                speak: "เอดส์ไม่ติดต่อโดยวิธีการดังต่อไปนี้ เช่น การรับประทานอาหารด้วยกัน การสัมผัสถูกต้องตัวกัน การใช้ห้องน้ำร่วมกัน การว่ายน้ำสระเดียวกัน หรือโดนยุงกัด ดังนั้น เอดส์ติดต่อกันได้ยาก ถ้ารู้จักป้องกัน จึงไม่ควรรังเกียจผู้ติดเชื้อครับ"
+            },
+            {
+                title: "6. ระยะที่ตรวจไม่พบเชื้อ (Window Period)",
+                icon: "fa-solid fa-calendar-times",
+                image: "images/slide_7.png",
+                text: `<p>เมื่อเชื้อเข้าสู่ร่างกาย ระบบภูมิคุ้มกันจะใช้เวลาในการสร้างแอนติบอดี้ (Antibodies)</p>
+                       <div class="bg-blue-100 border-l-4 border-blue-500 p-4 mt-4">
+                           <p class="font-bold">ใช้เวลาประมาณ 2 – 12 สัปดาห์</p>
+                           <p class="text-sm">ในช่วงเวลานี้ หากไปตรวจเลือดอาจจะยังให้ผลเป็น "ลบ" ทั้งๆ ที่มีเชื้อในร่างกายแล้ว</p>
+                       </div>`,
+                speak: "ระยะที่ตรวจไม่พบการติดเชื้อ หรือ Window period เมื่อเชื้อเข้าสู่ร่างกาย จะใช้เวลา 2 ถึง 12 สัปดาห์ในการสร้างแอนติบอดี้ ช่วงเวลานี้หากไปตรวจอาจยังไม่พบเชื้อ จึงเป็นเหตุผลที่ต้องตรวจซ้ำหากมีความเสี่ยง"
+            },
+            {
+                title: "7. ยาต้านไวรัส",
+                icon: "fa-solid fa-pills",
+                image: "images/slide_8.png",
+                text: `<ul class="list-disc pl-5 space-y-3">
+                        <li>ช่วยลดปริมาณเชื้อไวรัสในร่างกายให้น้อยลง</li>
+                        <li>ช่วยเพิ่มเม็ดเลือดขาว (CD4) ทำให้ภูมิคุ้มกันแข็งแรงขึ้น</li>
+                       </ul>
+                       <div class="bg-green-100 p-4 mt-4 rounded-lg text-center shadow-inner">
+                           <p class="font-bold text-green-800 text-lg">หัวใจสำคัญของการรักษา:</p>
+                           <p class="text-green-700">"ต้องมีวินัย กินยาให้ถูกต้อง ตรงเวลา และสม่ำเสมอตลอดชีวิต"</p>
+                       </div>`,
+                speak: "ยาต้านไวรัส เป็นยาที่ทำให้เชื้อในร่างกายลดลง และภูมิคุ้มกันแข็งแรงขึ้น หากอยากมีสุขภาพดีและชีวิตยืนยาว ผู้ติดเชื้อต้องมีวินัยในการกินยาให้ถูกต้อง ตรงเวลา และสม่ำเสมอตลอดชีวิตครับ จบการนำเสนอ ขอบคุณครับ"
+            }
+        ];
+
+        let currentSlideIndex = 0;
+        let isPlaying = false;
+        let speechSynthesis = window.speechSynthesis;
+        let utterance = null;
+
+        // ฟังก์ชั่นเริ่มการนำเสนอ
+        function startPresentation() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('presentationScreen').classList.remove('hidden');
+            renderSlide(0);
+            playAudio();
+        }
+
+        // ฟังก์ชั่นหยุด/ปิด
+        function stopPresentation() {
+            speechSynthesis.cancel();
+            isPlaying = false;
+            document.getElementById('presentationScreen').classList.add('hidden');
+            document.getElementById('endScreen').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+            currentSlideIndex = 0;
+        }
+
+        // แสดงผลสไลด์ตาม Index
+        function renderSlide(index) {
+            const slide = slides[index];
+            document.getElementById('slideTitle').innerHTML = slide.title;
+            document.getElementById('slideText').innerHTML = slide.text;
+
+            const slideImage = document.getElementById('slideImage');
+            const slideIcon = document.getElementById('slideIcon');
+
+            if (slide.image) {
+                slideImage.src = slide.image;
+                slideImage.classList.remove('hidden');
+                slideIcon.classList.add('hidden');
+            } else {
+                slideImage.classList.add('hidden');
+                slideIcon.className = `${slide.icon} text-7xl text-green-500 mb-6`;
+                slideIcon.classList.remove('hidden');
+            }
+
+            // อัพเดท Progress bar
+            const progress = ((index + 1) / slides.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
+
+        // ควบคุมเสียงอ่าน (Text to Speech)
+        function playAudio() {
+            speechSynthesis.cancel(); // หยุดเสียงเก่าก่อน
+
+            utterance = new SpeechSynthesisUtterance(slides[currentSlideIndex].speak);
+            utterance.lang = 'th-TH'; // ตั้งค่าเป็นภาษาไทย
+            utterance.rate = 1.0;     // ความเร็วในการอ่าน
+            utterance.pitch = 1.0;
+
+            utterance.onend = function () {
+                // เมื่ออ่านจบสไลด์นี้ ให้ไปสไลด์ถัดไปอัตโนมัติ (ถ้ายังเล่นอยู่)
+                if (isPlaying) {
+                    setTimeout(() => {
+                        nextSlide();
+                    }, 1000); // พัก 1 วินาทีก่อนเปลี่ยนสไลด์
+                }
+            };
+
+            speechSynthesis.speak(utterance);
+            isPlaying = true;
+            updatePlayPauseButton();
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                speechSynthesis.pause();
+                isPlaying = false;
+            } else {
+                if (speechSynthesis.paused) {
+                    speechSynthesis.resume();
+                } else {
+                    playAudio();
+                }
+                isPlaying = true;
+            }
+            updatePlayPauseButton();
+        }
+
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('playPauseBtn');
+            if (isPlaying) {
+                btn.innerHTML = '<i class="fa-solid fa-pause text-2xl"></i>';
+                btn.classList.replace('bg-blue-600', 'bg-green-600');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-play text-2xl pl-1"></i>';
+                btn.classList.replace('bg-green-600', 'bg-blue-600');
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlideIndex < slides.length - 1) {
+                currentSlideIndex++;
+                renderSlide(currentSlideIndex);
+                if (isPlaying) playAudio();
+            } else {
+                // จบสไลด์
+                isPlaying = false;
+                updatePlayPauseButton();
+                speechSynthesis.cancel();
+                showEndScreen();
+            }
+        }
+
+        function showEndScreen() {
+            document.getElementById('presentationScreen').classList.add('hidden');
+            document.getElementById('endScreen').classList.remove('hidden');
+        }
+
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                renderSlide(currentSlideIndex);
+                if (isPlaying) playAudio();
+            }
+        }
+
+        // ระบบ QR Code
+        let qrcodeGenerated = false;
+        function showQRCode() {
+            document.getElementById('qrModal').classList.remove('hidden');
+            if (!qrcodeGenerated) {
+                // ********* จุดแก้ไข URL สำหรับนักพัฒนา *********
+                // เปลี่ยน 'https://example.com/hiv-info' เป็น URL จริงของเว็บไซต์โรงพยาบาลของคุณ
+                const shareURL = window.location.href.startsWith('file') ? 'https://your-hospital-website.com/hiv-info-page' : window.location.href;
+
+                new QRCode(document.getElementById("qrcode"), {
+                    text: shareURL,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                qrcodeGenerated = true;
+            }
+        }
+
+        function closeQRCode() {
+            document.getElementById('qrModal').classList.add('hidden');
+        }
+
+        // จัดการเมื่อปิดแท็บ ให้เสียงหยุด
+        window.onbeforeunload = function () {
+            speechSynthesis.cancel();
+        };
+    </script>
+</body>
+
+</html>
