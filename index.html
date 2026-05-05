@@ -67,11 +67,12 @@
     <audio id="introMusic" src="audio/intro.mp3" preload="auto"></audio>
 
     <!-- Intro Splash Screen -->
-    <div id="introScreen" class="fixed inset-0 bg-green-600 z-[100] flex flex-col items-center justify-center">
+    <div id="introScreen" class="fixed inset-0 bg-green-600 z-[100] flex flex-col items-center justify-center cursor-pointer">
         <div class="text-white text-center intro-anim">
             <i class="fa-solid fa-heart-pulse text-8xl mb-6 animate-bounce"></i>
             <h1 class="text-4xl sm:text-5xl font-bold mb-4 tracking-wide">โรงพยาบาลศรีสะเกษ</h1>
-            <p class="text-green-200 text-xl font-medium">ยินดีให้บริการด้วยหัวใจ</p>
+            <p class="text-green-200 text-xl font-medium mb-8">ยินดีให้บริการด้วยหัวใจ</p>
+            <p class="text-white/80 text-base animate-pulse"><i class="fa-solid fa-hand-pointer mr-2"></i>แตะหน้าจอเพื่อเริ่ม</p>
         </div>
     </div>
 
@@ -496,29 +497,29 @@
             if (m) { m.pause(); m.currentTime = 0; }
         }
 
-        // ระบบ Intro Animation
+        // ระบบ Intro Animation — รอให้ user แตะ splash แล้วเล่น chime + fade ไปหน้า start
         document.addEventListener("DOMContentLoaded", () => {
-            playIntroChime();   // ลอง autoplay
-            // fallback: เล่นเมื่อ user แตะหน้าจอครั้งแรก (ครั้งเดียว)
-            const onFirstGesture = () => {
-                playIntroChime();
-                document.removeEventListener('touchstart', onFirstGesture, true);
-                document.removeEventListener('mousedown', onFirstGesture, true);
-            };
-            document.addEventListener('touchstart', onFirstGesture, true);
-            document.addEventListener('mousedown', onFirstGesture, true);
+            const intro = document.getElementById('introScreen');
+            if (!intro) return;
 
-            setTimeout(() => {
-                const intro = document.getElementById('introScreen');
-                if (intro) {
-                    intro.classList.add('intro-fade-out');
-                    setTimeout(() => {
-                        intro.remove();
-                        const startScreen = document.getElementById('startScreen');
-                        if (startScreen) startScreen.classList.remove('hidden');
-                    }, 800);
-                }
-            }, 2000);
+            let dismissed = false;
+            const dismiss = () => {
+                if (dismissed) return;
+                dismissed = true;
+                playIntroChime();   // เล่นภายใน user gesture — รับประกันว่าไม่ถูก block
+                intro.classList.add('intro-fade-out');
+                setTimeout(() => {
+                    intro.remove();
+                    const startScreen = document.getElementById('startScreen');
+                    if (startScreen) startScreen.classList.remove('hidden');
+                }, 800);
+            };
+
+            intro.addEventListener('click', dismiss);
+            intro.addEventListener('touchstart', dismiss, { passive: true });
+
+            // safety fallback: ถ้าไม่แตะภายใน 8 วินาที auto-dismiss (ไม่มีเสียง chime แต่ไม่ค้าง)
+            setTimeout(() => { if (!dismissed) dismiss(); }, 8000);
         });
     </script>
 </body>
