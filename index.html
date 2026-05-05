@@ -84,6 +84,9 @@
             <div id="progressBar" class="bg-green-400 h-2 progress-bar" style="width: 0%"></div>
         </div>
 
+        <!-- TTS Status (ขึ้นเมื่ออุปกรณ์ไม่รองรับเสียงไทย) -->
+        <div id="ttsStatus" class="hidden bg-yellow-50 border-b border-yellow-300 text-yellow-800 text-sm px-4 py-2"></div>
+
         <!-- Content Area -->
         <div class="flex-grow p-8 flex flex-col items-center justify-center text-center overflow-y-auto">
             <img id="slideImage" src=""
@@ -256,19 +259,74 @@
         let isPlaying = false;
         let speechSynthesis = window.speechSynthesis;
         let utterance = null;
+        let thaiVoice = null;
+        let resumeKeeper = null;
+
+        // โหลด voices (Android คืน [] ตอนแรก ต้องรอ voiceschanged)
+        function loadVoices() {
+            return new Promise((resolve) => {
+                let voices = speechSynthesis.getVoices();
+                if (voices && voices.length) return resolve(voices);
+                const onChange = () => {
+                    voices = speechSynthesis.getVoices();
+                    if (voices && voices.length) {
+                        speechSynthesis.removeEventListener('voiceschanged', onChange);
+                        resolve(voices);
+                    }
+                };
+                speechSynthesis.addEventListener('voiceschanged', onChange);
+                // เผื่อบางเบราว์เซอร์ไม่ยิง event เลย — รอสูงสุด 1.5 วิ แล้วคืนค่าที่ได้
+                setTimeout(() => {
+                    speechSynthesis.removeEventListener('voiceschanged', onChange);
+                    resolve(speechSynthesis.getVoices() || []);
+                }, 1500);
+            });
+        }
+
+        function pickThaiVoice(voices) {
+            if (!voices || !voices.length) return null;
+            return voices.find(v => /^th(-|_)/i.test(v.lang) || v.lang.toLowerCase() === 'th')
+                || voices.find(v => /thai/i.test(v.name))
+                || null;
+        }
+
+        function showTtsStatus(msg) {
+            const el = document.getElementById('ttsStatus');
+            if (!el) return;
+            if (!msg) { el.classList.add('hidden'); el.textContent = ''; return; }
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
 
         // ฟังก์ชั่นเริ่มการนำเสนอ
         function startPresentation() {
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('presentationScreen').classList.remove('hidden');
             renderSlide(0);
-            playAudio();
+
+            if (!('speechSynthesis' in window)) {
+                showTtsStatus('เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง (TTS)');
+                isPlaying = false;
+                updatePlayPauseButton();
+                return;
+            }
+
+            // เตรียม voices ก่อน (Android โหลด async)
+            loadVoices().then(voices => {
+                thaiVoice = pickThaiVoice(voices);
+                if (!thaiVoice) {
+                    showTtsStatus('อุปกรณ์นี้ไม่มีเสียงภาษาไทยติดตั้งอยู่ — กรุณาติดตั้ง "Google Text-to-Speech" และดาวน์โหลดเสียงภาษาไทยใน Settings → Language & input → Text-to-speech');
+                }
+                playAudio();
+            });
         }
 
         // ฟังก์ชั่นหยุด/ปิด
         function stopPresentation() {
             speechSynthesis.cancel();
+            if (resumeKeeper) { clearInterval(resumeKeeper); resumeKeeper = null; }
             isPlaying = false;
+            showTtsStatus('');
             document.getElementById('presentationScreen').classList.add('hidden');
             document.getElementById('endScreen').classList.add('hidden');
             document.getElementById('startScreen').classList.remove('hidden');
@@ -302,24 +360,50 @@
         // ควบคุมเสียงอ่าน (Text to Speech)
         function playAudio() {
             speechSynthesis.cancel(); // หยุดเสียงเก่าก่อน
+            if (resumeKeeper) { clearInterval(resumeKeeper); resumeKeeper = null; }
 
             utterance = new SpeechSynthesisUtterance(slides[currentSlideIndex].speak);
-            utterance.lang = 'th-TH'; // ตั้งค่าเป็นภาษาไทย
-            utterance.rate = 1.0;     // ความเร็วในการอ่าน
+            utterance.lang = 'th-TH';
+            utterance.rate = 1.0;
             utterance.pitch = 1.0;
+            if (thaiVoice) utterance.voice = thaiVoice;
 
             utterance.onend = function () {
-                // เมื่ออ่านจบสไลด์นี้ ให้ไปสไลด์ถัดไปอัตโนมัติ (ถ้ายังเล่นอยู่)
+                if (resumeKeeper) { clearInterval(resumeKeeper); resumeKeeper = null; }
                 if (isPlaying) {
-                    setTimeout(() => {
-                        nextSlide();
-                    }, 1000); // พัก 1 วินาทีก่อนเปลี่ยนสไลด์
+                    setTimeout(() => { nextSlide(); }, 1000);
                 }
+            };
+
+            utterance.onerror = function (e) {
+                if (resumeKeeper) { clearInterval(resumeKeeper); resumeKeeper = null; }
+                // not-allowed = ต้องการ user gesture, language-unavailable = ไม่มีเสียงภาษานั้น, synthesis-failed = engine มีปัญหา
+                const reasons = {
+                    'language-unavailable': 'อุปกรณ์ไม่มีเสียงภาษาไทย',
+                    'voice-unavailable': 'อุปกรณ์ไม่มีเสียงที่เลือก',
+                    'synthesis-failed': 'TTS engine ทำงานไม่สำเร็จ',
+                    'not-allowed': 'เบราว์เซอร์ไม่อนุญาตให้เล่นเสียง',
+                    'audio-busy': 'อุปกรณ์เสียงไม่ว่าง',
+                };
+                showTtsStatus('เล่นเสียงไม่สำเร็จ: ' + (reasons[e.error] || e.error || 'ไม่ทราบสาเหตุ'));
             };
 
             speechSynthesis.speak(utterance);
             isPlaying = true;
             updatePlayPauseButton();
+
+            // Workaround Chromium bug: utterance ยาว > ~15 วิจะถูกตัดเงียบ — เรียก resume() ซ้ำๆ ให้ engine ทำงานต่อ
+            resumeKeeper = setInterval(() => {
+                if (!speechSynthesis.speaking) {
+                    clearInterval(resumeKeeper);
+                    resumeKeeper = null;
+                    return;
+                }
+                if (!speechSynthesis.paused) {
+                    speechSynthesis.pause();
+                    speechSynthesis.resume();
+                }
+            }, 10000);
         }
 
         function togglePlay() {
