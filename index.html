@@ -73,7 +73,6 @@
             <h1 class="text-4xl sm:text-5xl font-bold mb-4 tracking-wide">โรงพยาบาลศรีสะเกษ</h1>
             <p class="text-green-200 text-xl font-medium mb-8">ยินดีให้บริการด้วยหัวใจ</p>
             <p class="text-white/80 text-base animate-pulse"><i class="fa-solid fa-hand-pointer mr-2"></i>แตะหน้าจอเพื่อเริ่ม</p>
-            <p id="introStatus" class="text-yellow-200 text-xs mt-6 font-mono break-all px-4"></p>
         </div>
     </div>
 
@@ -481,20 +480,15 @@
         };
 
         let introPlayed = false;
-        function setIntroStatus(t) { const el = document.getElementById('introStatus'); if (el) el.textContent = t; }
         function playIntroChime() {
-            if (introPlayed) { setIntroStatus('played already'); return; }
+            if (introPlayed) return;
             const m = document.getElementById('introMusic');
-            if (!m) { setIntroStatus('no audio el'); return; }
-            setIntroStatus('rs=' + m.readyState + ' ns=' + m.networkState + ' src=' + (m.currentSrc || '(none)').slice(-30));
-            try { m.load(); } catch(e) {}
+            if (!m) return;
             const p = m.play();
             if (p && typeof p.then === 'function') {
-                p.then(() => { introPlayed = true; setIntroStatus('PLAY OK rs=' + m.readyState); })
-                 .catch(err => { const ua = navigator.userActivation; setIntroStatus('FAIL: ' + (err.name || err.message || err) + ' rs=' + m.readyState + ' ua.hasBeen=' + (ua && ua.hasBeenActive) + ' ua.isActive=' + (ua && ua.isActive)); });
+                p.then(() => { introPlayed = true; }).catch(() => {});
             } else {
                 introPlayed = true;
-                setIntroStatus('play() returned undefined (legacy)');
             }
         }
         function stopIntroChime() {
@@ -511,23 +505,21 @@
             const dismiss = () => {
                 if (dismissed) return;
                 dismissed = true;
-                playIntroChime();   // เล่นภายใน user gesture — รับประกันว่าไม่ถูก block
-                // หน่วงเวลา 5 วิก่อน fade-out เพื่อดู status
+                playIntroChime();   // ต้องเรียกใน sync chain ของ click/pointerup เพื่อ activate autoplay
+                intro.classList.add('intro-fade-out');
                 setTimeout(() => {
-                    intro.classList.add('intro-fade-out');
-                    setTimeout(() => {
-                        intro.remove();
-                        const startScreen = document.getElementById('startScreen');
-                        if (startScreen) startScreen.classList.remove('hidden');
-                    }, 800);
-                }, 5000);
+                    intro.remove();
+                    const startScreen = document.getElementById('startScreen');
+                    if (startScreen) startScreen.classList.remove('hidden');
+                }, 800);
             };
 
+            // หมายเหตุ: ต้องใช้ click/pointerup, อย่าใช้ touchstart passive — Bromite ไม่นับเป็น user activation
             intro.addEventListener('click', dismiss);
             intro.addEventListener('pointerup', dismiss);
 
-            // ถ้าไม่แตะภายใน 30 วินาที auto-dismiss (เพิ่มเวลาเพื่อให้ทันอ่าน status)
-            setTimeout(() => { if (!dismissed) dismiss(); }, 30000);
+            // ถ้าไม่แตะภายใน 8 วินาที auto-dismiss (ไม่มีเสียง chime แต่ไม่ค้าง)
+            setTimeout(() => { if (!dismissed) dismiss(); }, 8000);
         });
     </script>
 </body>
