@@ -148,11 +148,7 @@
                 class="block w-full bg-[#00B900] text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition">
                 <i class="fa-brands fa-line mr-2"></i> แชร์ผ่าน LINE
             </a>
-            <!-- หมายเหตุสำหรับผู้พัฒนา -->
-            <p class="text-xs text-red-500 mt-4 text-left border-t pt-2">
-                *หมายเหตุ: ปัจจุบัน QR Code สร้างจาก URL จำลอง หากคุณนำไฟล์นี้ไปอัปโหลดขึ้นเว็บไซต์โรงพยาบาล ให้แก้ไข
-                URL ในโค้ดบรรทัดที่ 161 เป็นลิงก์เว็บของคุณ
-            </p>
+            <!-- หมายเหตุสำหรับผู้พัฒนา ถูกลบออกเนื่องจากตั้งค่า URL จริงแล้ว -->
         </div>
     </div>
 
@@ -384,9 +380,8 @@
         function showQRCode() {
             document.getElementById('qrModal').classList.remove('hidden');
             if (!qrcodeGenerated) {
-                // ********* จุดแก้ไข URL สำหรับนักพัฒนา *********
-                // เปลี่ยน 'https://example.com/hiv-info' เป็น URL จริงของเว็บไซต์โรงพยาบาลของคุณ
-                const shareURL = window.location.href.startsWith('file') ? 'https://your-hospital-website.com/hiv-info-page' : window.location.href;
+                // ********* ตั้งค่า URL สำหรับสแกน QR Code *********
+                const shareURL = 'https://duanganucha.github.io/aid-precheck/';
 
                 new QRCode(document.getElementById("qrcode"), {
                     text: shareURL,
