@@ -64,9 +64,9 @@
 <body class="h-[100dvh] flex flex-col items-center justify-center p-0 sm:p-4">
 
     <!-- Intro chime — เล่นตอน splash (หรือเมื่อ user แตะครั้งแรกถ้า autoplay ถูก block) -->
-    <audio id="introMusic" src="audio/intro.mp3" preload="auto"></audio>
+    <audio id="introMusic" src="audio/intro.mp3?v=2" preload="auto"></audio>
     <!-- Outro chime — เล่นตอน end screen -->
-    <audio id="outroMusic" src="audio/outro.mp3" preload="auto"></audio>
+    <audio id="outroMusic" src="audio/outro.mp3?v=2" preload="auto"></audio>
 
     <!-- Intro Splash Screen -->
     <div id="introScreen" class="fixed inset-0 bg-green-600 z-[100] flex flex-col items-center justify-center cursor-pointer">
@@ -308,7 +308,7 @@
 
         function ensureAudioPlayer() {
             if (audioPlayer) return audioPlayer;
-            audioPlayer = new Audio('audio/combined.mp3');
+            audioPlayer = new Audio('audio/combined.mp3?v=2');
             audioPlayer.preload = 'auto';
             audioPlayer.addEventListener('timeupdate', onTimeUpdate);
             audioPlayer.addEventListener('error', () => {
