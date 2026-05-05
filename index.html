@@ -40,14 +40,41 @@
         .progress-bar {
             transition: width 0.3s ease;
         }
+
+        @keyframes introFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .intro-anim {
+            animation: introFadeIn 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .intro-fade-out {
+            animation: fadeOut 0.8s ease-in-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
     </style>
 </head>
 
 <body class="h-[100dvh] flex flex-col items-center justify-center p-0 sm:p-4">
 
+    <!-- Intro Splash Screen -->
+    <div id="introScreen" class="fixed inset-0 bg-green-600 z-[100] flex flex-col items-center justify-center">
+        <div class="text-white text-center intro-anim">
+            <i class="fa-solid fa-heart-pulse text-8xl mb-6 animate-bounce"></i>
+            <h1 class="text-4xl sm:text-5xl font-bold mb-4 tracking-wide">โรงพยาบาลศรีสะเกษ</h1>
+            <p class="text-green-200 text-xl font-medium">ยินดีให้บริการด้วยหัวใจ</p>
+        </div>
+    </div>
+
     <!-- หน้าจอเริ่มต้น -->
     <div id="startScreen"
-        class="bg-white rounded-2xl shadow-xl p-8 max-w-2xl w-[calc(100%-2rem)] sm:w-full text-center slide-enter m-4 sm:m-0">
+        class="hidden bg-white rounded-2xl shadow-xl p-8 max-w-2xl w-[calc(100%-2rem)] sm:w-full text-center slide-enter m-4 sm:m-0">
         <div class="flex justify-center mb-6">
             <img src="images/start_cover.png" alt="Cover Image"
                 class="w-full max-w-sm rounded-xl shadow-lg object-cover border-4 border-white">
@@ -257,7 +284,13 @@
 
         let currentSlideIndex = 0;
         let isPlaying = false;
-        let audioPlayers = [];   // pre-create 1 element ต่อสไลด์ และ unlock ทุกตัวพร้อมกันใน user gesture แรก
+        let audioPlayer = null;
+
+        // ใช้ไฟล์เสียงรวม (combined.mp3) + กระโดด currentTime ระหว่างสไลด์
+        // เพื่อให้ play() ถูกเรียกครั้งเดียวภายใต้ user gesture (Chromium จะไม่ block)
+        const SEGMENT_DURATIONS = [22.564, 26.622, 20.358, 17.108, 20.467, 23.348, 20.059, 19.885];
+        const SEGMENT_STARTS = (() => { let t = 0; return SEGMENT_DURATIONS.map(d => { const s = t; t += d; return s; }); })();
+        const SEGMENT_ENDS = SEGMENT_STARTS.map((s, i) => s + SEGMENT_DURATIONS[i]);
 
         function showAudioStatus(msg) {
             const el = document.getElementById('ttsStatus');
@@ -267,38 +300,45 @@
             el.classList.remove('hidden');
         }
 
-        // สร้าง 8 Audio elements + เรียก play() บนทุกตัวภายใน user gesture เดียวกัน เพื่อปลดล็อก autoplay
-        // (Chromium policy: play() ที่สำเร็จใน user gesture จะ "pin" element นั้นให้เล่นได้อิสระตลอดอายุ session)
-        function unlockAudioPlayers() {
-            if (audioPlayers.length) return;
-            audioPlayers = slides.map((slide, idx) => {
-                const a = new Audio(slide.audio);
-                a.preload = 'auto';
-                a.addEventListener('ended', () => {
-                    if (isPlaying && idx === currentSlideIndex) {
-                        setTimeout(() => { nextSlide(); }, 800);
-                    }
-                });
-                a.addEventListener('error', () => {
-                    if (idx === currentSlideIndex) {
-                        showAudioStatus('โหลดไฟล์เสียงไม่สำเร็จ: ' + slide.audio);
-                    }
-                });
-                // play แล้ว pause ทันที — เพื่อ claim autoplay grant สำหรับ element นี้
-                const p = a.play();
-                if (p && typeof p.then === 'function') {
-                    p.then(() => { a.pause(); a.currentTime = 0; }).catch(() => { /* will retry on real play */ });
-                }
-                return a;
+        function ensureAudioPlayer() {
+            if (audioPlayer) return audioPlayer;
+            audioPlayer = new Audio('audio/combined.mp3');
+            audioPlayer.preload = 'auto';
+            audioPlayer.addEventListener('timeupdate', onTimeUpdate);
+            audioPlayer.addEventListener('error', () => {
+                showAudioStatus('โหลดไฟล์เสียงไม่สำเร็จ: audio/combined.mp3');
             });
+            return audioPlayer;
+        }
+
+        // เช็คทุก timeupdate (~250ms) ว่าเล่นเลยขอบ segment ปัจจุบันไปหรือยัง — ถ้าใช่ขยับสไลด์
+        function onTimeUpdate() {
+            if (!isPlaying || !audioPlayer) return;
+            const t = audioPlayer.currentTime;
+            const endOfCurrent = SEGMENT_ENDS[currentSlideIndex];
+            if (t >= endOfCurrent - 0.05) {
+                if (currentSlideIndex < slides.length - 1) {
+                    currentSlideIndex++;
+                    renderSlide(currentSlideIndex);
+                    // เสียงเล่นต่อเนื่อง — ไม่ต้อง seek เพราะ segment ถัดไปอยู่ติดกัน
+                } else {
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    updatePlayPauseButton();
+                    showEndScreen();
+                }
+            }
         }
 
         function stopCurrentAudio() {
-            audioPlayers.forEach(a => { try { a.pause(); a.currentTime = 0; } catch(e) {} });
+            if (audioPlayer) {
+                audioPlayer.pause();
+                try { audioPlayer.currentTime = 0; } catch(e) {}
+            }
         }
 
         function startPresentation() {
-            unlockAudioPlayers();   // ต้องเรียกใน synchronous chain ของ user click
+            ensureAudioPlayer();
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('presentationScreen').classList.remove('hidden');
             renderSlide(0);
@@ -339,11 +379,8 @@
 
         function playAudio() {
             showAudioStatus('');
-            // หยุดทุกตัวก่อน (เผื่อมี element ที่ยังเล่นอยู่)
-            audioPlayers.forEach((a, i) => { if (i !== currentSlideIndex) { try { a.pause(); a.currentTime = 0; } catch(e) {} } });
-            const player = audioPlayers[currentSlideIndex];
-            if (!player) return;
-            try { player.currentTime = 0; } catch(e) {}
+            const player = ensureAudioPlayer();
+            try { player.currentTime = SEGMENT_STARTS[currentSlideIndex]; } catch(e) {}
             const p = player.play();
             if (p && typeof p.catch === 'function') {
                 p.catch(err => {
@@ -355,13 +392,12 @@
         }
 
         function togglePlay() {
-            const player = audioPlayers[currentSlideIndex];
-            if (!player) { playAudio(); return; }
+            if (!audioPlayer) { playAudio(); return; }
             if (isPlaying) {
-                player.pause();
+                audioPlayer.pause();
                 isPlaying = false;
             } else {
-                player.play();
+                audioPlayer.play();
                 isPlaying = true;
             }
             updatePlayPauseButton();
@@ -382,7 +418,10 @@
             if (currentSlideIndex < slides.length - 1) {
                 currentSlideIndex++;
                 renderSlide(currentSlideIndex);
-                if (isPlaying) playAudio();
+                if (audioPlayer) {
+                    try { audioPlayer.currentTime = SEGMENT_STARTS[currentSlideIndex]; } catch(e) {}
+                    if (isPlaying) audioPlayer.play().catch(() => {});
+                }
             } else {
                 isPlaying = false;
                 updatePlayPauseButton();
@@ -400,7 +439,10 @@
             if (currentSlideIndex > 0) {
                 currentSlideIndex--;
                 renderSlide(currentSlideIndex);
-                if (isPlaying) playAudio();
+                if (audioPlayer) {
+                    try { audioPlayer.currentTime = SEGMENT_STARTS[currentSlideIndex]; } catch(e) {}
+                    if (isPlaying) audioPlayer.play().catch(() => {});
+                }
             }
         }
 
@@ -431,6 +473,21 @@
         window.onbeforeunload = function () {
             stopCurrentAudio();
         };
+
+        // ระบบ Intro Animation
+        document.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                const intro = document.getElementById('introScreen');
+                if (intro) {
+                    intro.classList.add('intro-fade-out');
+                    setTimeout(() => {
+                        intro.remove();
+                        const startScreen = document.getElementById('startScreen');
+                        if (startScreen) startScreen.classList.remove('hidden');
+                    }, 800);
+                }
+            }, 2000);
+        });
     </script>
 </body>
 
