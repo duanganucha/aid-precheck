@@ -65,6 +65,8 @@
 
     <!-- Intro chime — เล่นตอน splash (หรือเมื่อ user แตะครั้งแรกถ้า autoplay ถูก block) -->
     <audio id="introMusic" src="audio/intro.mp3" preload="auto"></audio>
+    <!-- Outro chime — เล่นตอน end screen -->
+    <audio id="outroMusic" src="audio/outro.mp3" preload="auto"></audio>
 
     <!-- Intro Splash Screen -->
     <div id="introScreen" class="fixed inset-0 bg-green-600 z-[100] flex flex-col items-center justify-center cursor-pointer">
@@ -352,6 +354,7 @@
 
         function stopPresentation() {
             stopCurrentAudio();
+            stopOutroChime();
             isPlaying = false;
             showAudioStatus('');
             document.getElementById('presentationScreen').classList.add('hidden');
@@ -438,6 +441,7 @@
         function showEndScreen() {
             document.getElementById('presentationScreen').classList.add('hidden');
             document.getElementById('endScreen').classList.remove('hidden');
+            playOutroChime();
         }
 
         function prevSlide() {
@@ -493,6 +497,18 @@
         }
         function stopIntroChime() {
             const m = document.getElementById('introMusic');
+            if (m) { m.pause(); m.currentTime = 0; }
+        }
+
+        function playOutroChime() {
+            const m = document.getElementById('outroMusic');
+            if (!m) return;
+            try { m.currentTime = 0; } catch(e) {}
+            const p = m.play();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+        }
+        function stopOutroChime() {
+            const m = document.getElementById('outroMusic');
             if (m) { m.pause(); m.currentTime = 0; }
         }
 
